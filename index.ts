@@ -1,14 +1,12 @@
 import express, { type Request, type Response } from "express"
 import dotenv from "dotenv"
 import cors from "cors"
-import twilio from "twilio"
+import { sendOTP } from "./utils/send-otp"
+import prisma from "./utils/prisma"
+import type { LoginRequestBody, User } from "./types/types"
+import type { JwtPayload } from "jsonwebtoken"
+import jwt from "jsonwebtoken"
 
-
-const accountSid = process.env.TWILIO_ACCOUNT_SID!;
-const authToken = process.env.TWILIO_AUTH_TOKEN!;
-const twilioPhone = process.env.TWILIO_PHONE_NO!;
-
-const client = twilio(accountSid, authToken)
 
 
 dotenv.config()
@@ -26,23 +24,7 @@ app.use(cors({
 // this is middleware
 app.use(express.json())
 
-const sendOTP = async (to: string, otp: string) => {
 
-    try {
-
-        const message = await client.messages.create({
-            body: `Your otp is ${otp}`,
-            from: twilioPhone,
-            to: to
-        })
-
-        console.log('message sent')
-        return message
-
-    } catch (error) {
-        console.log(error)
-    }
-}
 
 app.get("/get", async (req: Request, res: Response) => {
 
@@ -52,6 +34,49 @@ app.get("/get", async (req: Request, res: Response) => {
         message: response,
         status: 200
     })
+})
+
+
+/*
+the three sets of curly braces represent the generic type parameters for Express's Request type:
+
+Request<Params = {}, ResBody = any, ReqBody = any, ReqQuery = ParsedQs, Locals = Record<string, any>>
+*/
+app.get("/login", async (req: Request<{}, {}, LoginRequestBody>, res: Response) => {
+
+    const { phoneNumber, password } = req.body
+
+    // find if user exist or not
+    const user: User | null = await prisma.user.findUnique({
+        where: {
+            phoneNumber
+        }
+    })
+
+    if (!user) {
+        throw new Error("User is not Registered")
+    }
+
+    // if user is presnet genrate token for that user   
+
+    // payload
+    const payload: JwtPayload = {
+        id: user.id,
+        phoneNumber: user.phoneNumber
+    }
+
+    // secret for jwt
+    const secret = process.env.AUTH_TOKEN_SECRET!
+
+    // options
+
+    const options = {
+        expiersIn: '1d',
+        algorithm: 'HS256'
+    }
+
+    // const token = jwt.sign(payload, secret, options);
+
 })
 
 app.listen(PORT, () => {

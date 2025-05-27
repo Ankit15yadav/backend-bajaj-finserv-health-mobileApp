@@ -1969,14 +1969,14 @@ export namespace Prisma {
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
     id?: string
+    phoneNumber?: string
     AND?: UserWhereInput | UserWhereInput[]
     OR?: UserWhereInput[]
     NOT?: UserWhereInput | UserWhereInput[]
     isFirstTimeLogin?: BoolFilter<"User"> | boolean
     firstName?: StringFilter<"User"> | string
     lastName?: StringFilter<"User"> | string
-    phoneNumber?: StringFilter<"User"> | string
-  }, "id">
+  }, "id" | "phoneNumber">
 
   export type UserOrderByWithAggregationInput = {
     id?: SortOrder
@@ -2002,7 +2002,7 @@ export namespace Prisma {
 
   export type UserCreateInput = {
     id?: string
-    isFirstTimeLogin: boolean
+    isFirstTimeLogin?: boolean
     firstName: string
     lastName: string
     phoneNumber: string
@@ -2010,7 +2010,7 @@ export namespace Prisma {
 
   export type UserUncheckedCreateInput = {
     id?: string
-    isFirstTimeLogin: boolean
+    isFirstTimeLogin?: boolean
     firstName: string
     lastName: string
     phoneNumber: string
@@ -2034,7 +2034,7 @@ export namespace Prisma {
 
   export type UserCreateManyInput = {
     id?: string
-    isFirstTimeLogin: boolean
+    isFirstTimeLogin?: boolean
     firstName: string
     lastName: string
     phoneNumber: string

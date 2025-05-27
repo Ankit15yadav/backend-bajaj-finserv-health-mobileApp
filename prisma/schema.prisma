@@ -16,8 +16,8 @@ datasource db {
 
 model User {
   id               String  @id @default(uuid())
-  isFirstTimeLogin Boolean
+  isFirstTimeLogin Boolean @default(false)
   firstName        String
   lastName         String
-  phoneNumber      String
+  phoneNumber      String  @unique
 }
