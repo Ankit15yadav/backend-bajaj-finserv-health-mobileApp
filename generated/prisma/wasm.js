@@ -128,6 +128,14 @@ exports.Prisma.UserScalarFieldEnum = {
   phoneNumber: 'phoneNumber'
 };
 
+exports.Prisma.OtpScalarFieldEnum = {
+  id: 'id',
+  phoneNumber: 'phoneNumber',
+  otp: 'otp',
+  otpExpires: 'otpExpires',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -138,9 +146,15 @@ exports.Prisma.QueryMode = {
   insensitive: 'insensitive'
 };
 
+exports.Prisma.NullsOrder = {
+  first: 'first',
+  last: 'last'
+};
+
 
 exports.Prisma.ModelName = {
-  User: 'User'
+  User: 'User',
+  Otp: 'Otp'
 };
 
 /**

@@ -15,9 +15,17 @@ datasource db {
 }
 
 model User {
-  id               String  @id @default(uuid())
-  isFirstTimeLogin Boolean @default(false)
+  id               String   @id @default(uuid())
+  isFirstTimeLogin Boolean? @default(false)
   firstName        String
   lastName         String
-  phoneNumber      String  @unique
+  phoneNumber      String   @unique
+}
+
+model Otp {
+  id          String    @id @default(uuid())
+  phoneNumber String    @unique
+  otp         String
+  otpExpires  DateTime?
+  createdAt   DateTime  @default(now())
 }

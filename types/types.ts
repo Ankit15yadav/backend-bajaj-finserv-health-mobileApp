@@ -13,7 +13,7 @@ export type User = {
     id: string,
     firstName: string,
     lastName: string,
-    isFirstTimeLogin: boolean,
+    isFirstTimeLogin?: boolean | null,
     phoneNumber: string
 
 }

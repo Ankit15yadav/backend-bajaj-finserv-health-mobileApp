@@ -12,7 +12,7 @@ export const sendOTP = async (to: string, otp: string) => {
         const message = await client.messages.create({
             body: `Your otp is ${otp}`,
             from: twilioPhone,
-            to: to
+            to: `+91${to}`
         })
 
         console.log('message sent')

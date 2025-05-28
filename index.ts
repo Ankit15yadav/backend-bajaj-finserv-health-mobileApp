@@ -6,7 +6,7 @@ import prisma from "./utils/prisma"
 import type { LoginRequestBody, User } from "./types/types"
 import type { JwtPayload } from "jsonwebtoken"
 import jwt from "jsonwebtoken"
-
+import auth from "./src/routes/auth"
 
 
 dotenv.config()
@@ -42,42 +42,57 @@ the three sets of curly braces represent the generic type parameters for Express
 
 Request<Params = {}, ResBody = any, ReqBody = any, ReqQuery = ParsedQs, Locals = Record<string, any>>
 */
-app.get("/login", async (req: Request<{}, {}, LoginRequestBody>, res: Response) => {
+// app.post("/login", async (req: Request<{}, {}, LoginRequestBody>, res: Response) => {
 
-    const { phoneNumber, password } = req.body
+//     const { phoneNumber } = req.body
 
-    // find if user exist or not
-    const user: User | null = await prisma.user.findUnique({
-        where: {
-            phoneNumber
-        }
-    })
+//     if (!phoneNumber) {
+//         throw new Error("PhoneNumber is missing!!")
+//     }
 
-    if (!user) {
-        throw new Error("User is not Registered")
-    }
+//     // find if user exist or not
+//     const user: User | null = await prisma.user.findUnique({
+//         where: {
+//             phoneNumber
+//         }
+//     })
 
-    // if user is presnet genrate token for that user   
+//     if (!user) {
 
-    // payload
-    const payload: JwtPayload = {
-        id: user.id,
-        phoneNumber: user.phoneNumber
-    }
+//         throw new Error("User is not Registered")
+//     }
 
-    // secret for jwt
-    const secret = process.env.AUTH_TOKEN_SECRET!
+//     // if user is presnet genrate token for that user   
 
-    // options
+//     // payload
+//     const payload: JwtPayload = {
+//         id: user.id,
+//         phoneNumber: user.phoneNumber
+//     }
 
-    const options = {
-        expiersIn: '1d',
-        algorithm: 'HS256'
-    }
+//     // secret for jwt
+//     const secret = process.env.AUTH_TOKEN_SECRET!
 
-    // const token = jwt.sign(payload, secret, options);
+//     // options
 
-})
+//     const options: jwt.SignOptions = {
+//         expiresIn: '1d',
+//         // here hs256 can't be a string that's why this is passed a s    
+//         algorithm: 'HS256',
+//     }
+
+//     const token = jwt.sign(payload, secret, options);
+
+//     const respone = {
+//         AuthToken: token,
+//         message: "User Logged in successfully"
+//     }
+
+//     res.status(201).json(respone)
+
+// })
+
+app.use('/api/auth', auth)
 
 app.listen(PORT, () => {
     console.log(`Server is running of port : ${PORT}`)

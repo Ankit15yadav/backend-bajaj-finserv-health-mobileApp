@@ -7,6 +7,9 @@
     "@types/bun": "latest",
     "@types/cors": "^2.8.18"
   },
+  "scripts": {
+    "start": "bun run index.ts"
+  },
   "peerDependencies": {
     "typescript": "^5.8.3"
   },
