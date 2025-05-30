@@ -2,77 +2,90 @@ import type { Request, Response } from "express";
 import prisma from "../../utils/prisma";
 import { sendOTP } from "../../utils/send-otp";
 import { generateAuthToken, generateRefreshToken } from "../../utils/token-generation";
+import crypto from "crypto";
 
 export async function Login(req: Request, res: Response) {
-
     const { phoneNumber } = req.body;
 
+    // Input validation
     if (!phoneNumber) {
-        throw new Error("Phone number is a required field");
+        return res.status(400).json({
+            success: false,
+            message: "Phone number is a required field"
+        });
     }
 
     if (phoneNumber.length < 10) {
-        throw new Error("Phone number length should be 10")
+        return res.status(400).json({
+            success: false,
+            message: "Phone number length should be 10"
+        });
     }
 
-    // check if user is prensent or not
-    let user = await prisma.user.findUnique({
-        where: {
-            phoneNumber: phoneNumber
-        }
-    })
+    try {
+        // Generate OTP and expiration time upfront
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    if (!user) {
-        // insert user in the db
-        user = await prisma.user.create({
-            data: {
-                phoneNumber: phoneNumber,
-                firstName: '',
-                lastName: '',
-                isFirstTimeLogin: true
-            }
-        })
+        // Use faster hashing (SHA-256 instead of bcrypt for OTP)
+        const hashedOTP = crypto.createHash('sha256').update(otp + process.env.OTP_SALT).digest('hex');
 
+        // Parallel execution of database operations
+        const [user] = await Promise.all([
+            // Find or create user
+            prisma.user.upsert({
+                where: { phoneNumber },
+                update: {}, // No updates needed if user exists
+                create: {
+                    phoneNumber,
+                    firstName: '',
+                    lastName: '',
+                    isFirstTimeLogin: true
+                }
+            }),
+
+            // Store OTP in parallel
+            prisma.otp.upsert({
+                where: { phoneNumber },
+                update: {
+                    otp: hashedOTP,
+                    otpExpires: expiresAt
+                },
+                create: {
+                    phoneNumber,
+                    otp: hashedOTP,
+                    otpExpires: expiresAt
+                }
+            })
+        ]);
+
+        // Generate tokens
+        const payload = {
+            id: user.id,
+            name: user.firstName
+        };
+        const authToken = generateAuthToken(payload);
+        const refreshToken = generateRefreshToken(payload);
+
+        // Send response immediately (don't wait for OTP to be sent)
+        res.status(200).json({
+            success: true,
+            authToken,
+            refreshToken,
+            message: "OTP is being sent to your phone"
+        });
+
+        // Send OTP asynchronously (fire and forget)
+        sendOTP(phoneNumber, otp).catch(error => {
+            console.error('Failed to send OTP:', error);
+            // You might want to implement retry logic or notification here
+        });
+
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
     }
-
-    // random otp generation
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // otp expiration time 
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-
-    // insert the otp in the database
-    await prisma.otp.upsert({
-        where: {
-            phoneNumber: phoneNumber,
-        },
-        update: {
-            otp: otp,
-            otpExpires: expiresAt
-        },
-        create: {
-            phoneNumber: phoneNumber,
-            otp: otp,
-            otpExpires: expiresAt
-        }
-    })
-
-
-    // send otp through SMS
-    await sendOTP(phoneNumber, otp)
-
-    // generate tokens 
-    const payload = {
-        id: user.id,
-        name: user.firstName
-    }
-    const authToken = generateAuthToken(payload)
-    const refreshToken = generateRefreshToken(payload);
-
-    res.status(200).json({
-        success: true,
-        authToken,
-        refreshToken,
-        otp
-    })
 }
