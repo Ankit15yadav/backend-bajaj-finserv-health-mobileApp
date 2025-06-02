@@ -22,3 +22,8 @@ export const sendOTP = async (to: string, otp: string) => {
         console.log(error)
     }
 }
+
+export const generateOTP = () => {
+
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}

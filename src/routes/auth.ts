@@ -1,8 +1,9 @@
 import express from "express"
-import { Login } from "../controllers/authentication"
+import { UserLogin, ResendOtp } from "../controllers/authentication"
 const router = express.Router()
 
 
-router.post('/login', Login)
+router.post('/login', UserLogin)
+router.post('/login/otp/resend', ResendOtp)
 
 export default router

@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
 import prisma from "../../utils/prisma";
-import { sendOTP } from "../../utils/send-otp";
+import { generateOTP, sendOTP } from "../../utils/otp";
 import { generateAuthToken, generateRefreshToken } from "../../utils/token-generation";
-import crypto from "crypto";
+import bcrypt from "bcryptjs"
 
-export async function Login(req: Request, res: Response) {
+export async function UserLogin(req: Request, res: Response) {
     const { phoneNumber } = req.body;
 
     // Input validation
@@ -24,15 +24,16 @@ export async function Login(req: Request, res: Response) {
 
     try {
         // Generate OTP and expiration time upfront
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = generateOTP()
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-        // Use faster hashing (SHA-256 instead of bcrypt for OTP)
-        const hashedOTP = crypto.createHash('sha256').update(otp + process.env.OTP_SALT).digest('hex');
-
+        const hashedOTP = bcrypt.hashSync(otp, 3)
         // Parallel execution of database operations
+
+        // this is destructing of user , if i want other field of promise 
+        // then i can use [user, otpResult, ...]
         const [user] = await Promise.all([
-            // Find or create user
+            // Find or create user   
             prisma.user.upsert({
                 where: { phoneNumber },
                 update: {}, // No updates needed if user exists
@@ -72,6 +73,8 @@ export async function Login(req: Request, res: Response) {
             success: true,
             authToken,
             refreshToken,
+            hashedOTP: hashedOTP,
+            firstTimeLogin: user.isFirstTimeLogin,
             message: "OTP is being sent to your phone"
         });
 
@@ -88,4 +91,34 @@ export async function Login(req: Request, res: Response) {
             message: "Internal server error"
         });
     }
+}
+
+export async function ResendOtp(req: Request, res: Response) {
+
+    const { phoneNumber } = req.body
+
+    if (!phoneNumber) {
+        throw new Error("Phone number is required");
+    }
+
+    const otp = generateOTP();
+    const hashedOTP = bcrypt.hashSync(otp, 3);
+
+    await prisma.otp.upsert({
+        where: { phoneNumber },
+        update: {
+            otp: hashedOTP,
+        },
+        create: {
+            phoneNumber,
+            otp: hashedOTP,
+        }
+    })
+
+    res.status(200).json({
+        success: true,
+        hashedOTP,
+    })
+
+    sendOTP(phoneNumber, otp)
 }
