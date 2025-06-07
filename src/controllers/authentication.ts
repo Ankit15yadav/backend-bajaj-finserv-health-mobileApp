@@ -3,6 +3,7 @@ import prisma from "../../utils/prisma";
 import { generateOTP, sendOTP } from "../../utils/otp";
 import { generateAuthToken, generateRefreshToken } from "../../utils/token-generation";
 import bcrypt from "bcryptjs"
+import jwt from "jsonwebtoken"
 
 export async function UserLogin(req: Request, res: Response) {
     const { phoneNumber } = req.body;
@@ -41,7 +42,12 @@ export async function UserLogin(req: Request, res: Response) {
                     phoneNumber,
                     firstName: '',
                     lastName: '',
-                    isFirstTimeLogin: true
+                    isFirstTimeLogin: true,
+                    age: '', bloodGroup: '',
+                    gender: 'null',
+                    height: '',
+                    weight: '',
+                    refreshToken: ''
                 }
             }),
 
@@ -63,26 +69,35 @@ export async function UserLogin(req: Request, res: Response) {
         // Generate tokens
         const payload = {
             id: user.id,
-            name: user.firstName
+            phone: user.phoneNumber
         };
         const authToken = generateAuthToken(payload);
         const refreshToken = generateRefreshToken(payload);
+
+        await prisma.user.update({
+            where: {
+                id: user?.id,
+            },
+            data: {
+                refreshToken
+            }
+        })
+
+        sendOTP(phoneNumber, otp).catch(error => {
+            console.error('Failed to send OTP:', error);
+            // You might want to implement retry logic or notification here
+        });
 
         // Send response immediately (don't wait for OTP to be sent)
         res.status(200).json({
             success: true,
             authToken,
-            refreshToken,
             hashedOTP: hashedOTP,
             firstTimeLogin: user.isFirstTimeLogin,
             message: "OTP is being sent to your phone"
         });
 
-        // Send OTP asynchronously (fire and forget)
-        sendOTP(phoneNumber, otp).catch(error => {
-            console.error('Failed to send OTP:', error);
-            // You might want to implement retry logic or notification here
-        });
+        return;
 
     } catch (error) {
         console.error('Login error:', error);
@@ -95,6 +110,7 @@ export async function UserLogin(req: Request, res: Response) {
 
 export async function ResendOtp(req: Request, res: Response) {
 
+    // console.log(req);
     const { phoneNumber } = req.body
 
     if (!phoneNumber) {
@@ -121,4 +137,68 @@ export async function ResendOtp(req: Request, res: Response) {
     })
 
     sendOTP(phoneNumber, otp)
+}
+
+export async function RefreshToken(req: Request, res: Response) {
+    try {
+        const { phoneNumber } = req.body;
+
+        const userId = phoneNumber;
+        // find user by id
+        const user = await prisma.user.findUnique({
+            where: {
+                phoneNumber: userId,
+            }
+        })
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "USER IS NOT PRESENT"
+            })
+        }
+        // get refresh token from user and  validate it
+        const refreshToken = user.refreshToken;
+        const verifyToken = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET! ?? "")
+        if (!verifyToken) {
+            // token is not valid return the response that user should logged in
+            return res.status(401).json({
+                success: false,
+                message: "REFRESH TOKEN IS NOT VALID , PLEASE LOG IN THE USER AGAIN"
+            })
+        }
+
+        console.log("REFRESH TOKEN IS VALID")
+        // if valid create new access and refresh token
+        const payload = {
+            id: user.id,
+            phone: user.phoneNumber
+        };
+        const newAccessToken = generateAuthToken(payload);
+        const newRefreshToken = generateRefreshToken(payload);
+
+        await prisma.user.update({
+            where: {
+                phoneNumber: userId
+            },
+            data: {
+                refreshToken: newRefreshToken
+            }
+        })
+
+        console.log("NEW TOKEN INSERTED IN THE DB")
+
+        return res.status(200).json({
+            success: true,
+            message: "TOKEN GENERATED SUCCESSFULLY",
+            newAccessToken,
+        })
+
+    } catch (error) {
+
+        console.log(error);
+        res.status(500).json({
+            success: false,
+            message: "ERROR WHILE REFRESHING TOKEN"
+        })
+    }
 }

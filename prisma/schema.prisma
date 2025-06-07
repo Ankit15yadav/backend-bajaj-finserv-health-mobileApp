@@ -20,6 +20,15 @@ model User {
   firstName        String
   lastName         String
   phoneNumber      String   @unique
+  age              String
+  gender           Gender   @default(null)
+  bloodGroup       String
+  height           String
+  weight           String
+  refreshToken     String
+  // medicalHistory []
+  // allergies[]
+  // medications[]
 }
 
 model Otp {
@@ -28,4 +37,11 @@ model Otp {
   otp         String
   otpExpires  DateTime?
   createdAt   DateTime  @default(now())
+}
+
+enum Gender {
+  male
+  female
+  other
+  null
 }

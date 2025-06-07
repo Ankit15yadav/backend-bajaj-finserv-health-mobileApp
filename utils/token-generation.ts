@@ -6,7 +6,7 @@ export function generateAuthToken(payload: JwtPayload) {
         payload,
         process.env.AUTH_TOKEN_SECRET! as string,
         {
-            expiresIn: '15h'
+            expiresIn: '20s'
         });
 }
 
@@ -15,6 +15,6 @@ export function generateRefreshToken(payload: JwtPayload) {
         payload,
         process.env.REFRESH_TOKEN_SECRET! as string,
         {
-            expiresIn: '30d'
+            expiresIn: '40s'
         });
 }
