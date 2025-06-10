@@ -7,6 +7,7 @@ const client = twilio(accountSid, authToken)
 
 export const sendOTP = async (to: string, otp: string) => {
 
+    console.log(otp)
     try {
 
         const message = await client.messages.create({
@@ -15,7 +16,7 @@ export const sendOTP = async (to: string, otp: string) => {
             to: `+91${to}`
         })
 
-        console.log('message sent')
+        console.log('Otp send', otp)
         return message
 
     } catch (error) {

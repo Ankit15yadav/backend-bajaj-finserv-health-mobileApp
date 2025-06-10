@@ -5,7 +5,7 @@ import { generateAuthToken, generateRefreshToken } from "../../utils/token-gener
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 
-export async function UserLogin(req: Request, res: Response) {
+export async function UserLogin(req: Request, res: Response): Promise<Response | undefined> {
     const { phoneNumber } = req.body;
 
     // Input validation
@@ -89,7 +89,7 @@ export async function UserLogin(req: Request, res: Response) {
         });
 
         // Send response immediately (don't wait for OTP to be sent)
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             authToken,
             hashedOTP: hashedOTP,
@@ -97,7 +97,6 @@ export async function UserLogin(req: Request, res: Response) {
             message: "OTP is being sent to your phone"
         });
 
-        return;
 
     } catch (error) {
         console.error('Login error:', error);
@@ -108,38 +107,41 @@ export async function UserLogin(req: Request, res: Response) {
     }
 }
 
-export async function ResendOtp(req: Request, res: Response) {
+export async function ResendOtp(req: Request, res: Response): Promise<Response | undefined> {
 
     // console.log(req);
-    const { phoneNumber } = req.body
+    try {
+        const { phoneNumber } = req.body
 
-    if (!phoneNumber) {
-        throw new Error("Phone number is required");
-    }
-
-    const otp = generateOTP();
-    const hashedOTP = bcrypt.hashSync(otp, 3);
-
-    await prisma.otp.upsert({
-        where: { phoneNumber },
-        update: {
-            otp: hashedOTP,
-        },
-        create: {
-            phoneNumber,
-            otp: hashedOTP,
+        if (!phoneNumber) {
+            throw new Error("Phone number is required");
         }
-    })
 
-    res.status(200).json({
-        success: true,
-        hashedOTP,
-    })
+        const otp = generateOTP();
+        const hashedOTP = bcrypt.hashSync(otp, 3);
 
-    sendOTP(phoneNumber, otp)
+        await prisma.otp.upsert({
+            where: { phoneNumber },
+            update: {
+                otp: hashedOTP,
+            },
+            create: {
+                phoneNumber,
+                otp: hashedOTP,
+            }
+        })
+        sendOTP(phoneNumber, otp)
+
+        return res.status(200).json({
+            success: true,
+            hashedOTP,
+        })
+    } catch (error) {
+        console.log(error)
+    }
 }
 
-export async function RefreshToken(req: Request, res: Response) {
+export async function RefreshToken(req: Request, res: Response): Promise<Response | undefined> {
     try {
         const { phoneNumber } = req.body;
 
