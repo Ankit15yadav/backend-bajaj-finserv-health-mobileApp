@@ -1,5 +1,6 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { genAIService } from '../services/genAiServices';
+import type { Message } from '../../types/types';
 
 class SocketIoSetup {
 
@@ -9,10 +10,10 @@ class SocketIoSetup {
         io.on("connection", (socket: Socket) => {
             console.log('client connected', socket.id)
 
-            socket.on("generate-stream", async (data: { prompt: string }) => {
+            socket.on("generate-stream", async (data: { prompt: string, history?: Message[] }) => {
                 try {
 
-                    const { prompt } = data;
+                    const { prompt, history } = data;
 
                     if (!prompt) {
                         socket.emit("error", { message: "Prompt is required" });
@@ -21,7 +22,7 @@ class SocketIoSetup {
 
                     socket.emit('generation-start')
 
-                    for await (const chunk of genAIService.generateContentStream(prompt)) {
+                    for await (const chunk of genAIService.generateContentStream(prompt, history)) {
                         socket.emit('chunk', { text: chunk })
                     }
 

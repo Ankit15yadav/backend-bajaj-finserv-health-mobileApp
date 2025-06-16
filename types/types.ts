@@ -17,3 +17,11 @@ export type User = {
     phoneNumber: string
 
 }
+
+export interface Message {
+    id: string;
+    text: string;
+    isUser: boolean;
+    timestamp: Date;
+    isStreaming?: boolean;
+}
