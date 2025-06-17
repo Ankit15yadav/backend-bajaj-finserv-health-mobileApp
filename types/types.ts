@@ -34,7 +34,7 @@ export interface Tools {
         properties: Record<string, any>
         required: string[]
     }
-    handler: (args: any) => Promise<any>
+    handler: (args: GetDoctorsParams) => Promise<any>
 }
 
 
@@ -44,4 +44,28 @@ export interface GetDoctorsParams {
     lastId?: string;
     take?: number;
     fee?: number;
+}
+
+export interface Doctor {
+    id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    gender: string;
+    dob: Date;
+    profileImage?: string | null;
+    specialization: string;
+    experienceYears: number;
+    education: string;
+    languagesSpoken: string[];
+    consultationFee: number;
+    isVerified: boolean;
+    rating: number;
+    bio?: string | null;
+    address?: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+    createdAt: Date;
+    updatedAt: Date;
 }

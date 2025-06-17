@@ -23,10 +23,10 @@ export const healthTools: Record<string, Tools> = {
             },
             required: []
         },
-        handler: async (args) => {
+        handler: async (args: GetDoctorsParams) => {
             try {
 
-                console.log(args);
+                // console.log(args);
 
                 const queryParams: GetDoctorsParams = {
                     name: args.name,

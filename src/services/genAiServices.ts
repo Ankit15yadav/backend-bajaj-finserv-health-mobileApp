@@ -1,34 +1,9 @@
 import { GoogleGenAI } from "@google/genai"
-import type { Message, Tools } from "../../types/types";
+import type { Doctor, GetDoctorsParams, Message, Tools } from "../../types/types";
 import { healthTools } from "../config/agent.tools";
+import { FUNCTION_CALL_PROMPT, generateDoctorResponsePrompt, getArgumentsForFunctionCall, SYSTEM_PROMPT } from "../config/prompts";
+import { safeJsonParse } from "../config/safe.json.parse";
 
-const FUNCTION_CALL_PROMPT =
-    `
-You are an expert AI agent whose sole job is to read the user's request and choose exactly one function to call. Do not execute it—only indicate which function should be invoked.
-
-Available functions:
-- search_doctor: Search for doctors by name (partial or full), specialization, fee range, location, rating, experience, etc.
-- book_doctor: Book an appointment with a specific doctor (requires doctor ID and slot details).
-*(Add more functions here as needed.)*
-
-When you receive a user prompt:
-1. Identify the user's intent and any relevant parameters.
-2. Select the single most appropriate function.
-3. Ignore all unrelated details.
-
-Respond **only** with the chosen function name, wrapped in backticks, in this exact format:
-'function:<function_name>'
-
-Examples:
-User: “Can you suggest a general physician with fees under 600?”  
-Agent:  
-function:search_doctor
-
-User: “I'd like to book an appointment with Dr. Ananya Das next Wednesday at 3 PM.”  
-Agent:  
-function:book_doctor
-
-`
 
 class GenAIService {
     private genAI: GoogleGenAI
@@ -41,9 +16,6 @@ class GenAIService {
         this.tools = healthTools
     }
 
-
-
-
     async *generateContentStream(prompt: string, history?: Message[]) {
         try {
 
@@ -51,16 +23,10 @@ class GenAIService {
                 .map((msg) => `${msg.isUser ? "User" : "AI"}: ${msg.text}`)
                 .join('\n')
 
-            const SYSTEM_PROMPT = `
-            You are an intelligent agent representing Bajaj Finserv Health, a renowned leader in health technology. Your primary role is to provide precise, actionable health-related information, data, and guidance based on the user's questions. 
-
-            • If the user's query is outside of health or related domains (e.g., finance, travel, general chitchat), politely remind them: “I specialize in health-tech topics—could you please rephrase your question to focus on health, wellness, or related services?”  
-            • Even when users stray into other topics, do not lose sight of the main context; always steer them back to health-tech inquiries.  
-            • You may handle simple greetings or pleasantries naturally, but quickly pivot back: “Hello! How can I assist you with your health-tech needs today?”  
-            • Always maintain a professional, empathetic tone, and leverage the provided conversation history to keep context, continuity, and accuracy.  
-
-            Conversation History:
-            ${formattedHistory}`;
+            const system_prompt = SYSTEM_PROMPT
+                +
+                `\n Conversation History:
+                ${formattedHistory}`
 
             // MODEL 1
 
@@ -73,25 +39,88 @@ class GenAIService {
                 ]
             })
 
-            const function_to_call = function_call.candidates?.[0]?.content?.parts?.[0]?.text?.split(':')[1]?.trim()
+            // model's result to call which function
+            const function_to_call = function_call.candidates?.[0]?.content?.parts?.[0]?.text?.split(':')[1]?.trim() || undefined
+            // console.log(function_to_call)
 
             // #Properties of a function that we have to pass in the arguments
-            const properties_of_function_call = this.tools[function_to_call || '']?.parameter?.properties
+            // TODO : HANDLE THE CASE WHEN THIS IS PROPERTY IS AN EMPTY OBJECT
+            let properties_of_function_call
 
-            // return;
 
-            // console.log(formattedHistory)
-            const response = await this.genAI.models.generateContentStream({
-                model: 'gemini-2.0-flash',
-                contents: [
-                    { role: 'model', parts: [{ text: SYSTEM_PROMPT }] },
-                    { role: 'user', parts: [{ text: prompt }] },
-                ],
-            })
+            if (function_to_call) {
+                console.log(function_to_call)
+                properties_of_function_call = this.tools[function_to_call || '']?.parameter?.properties ?? 'no properties found'
+                // console.log(properties_of_function_call)
 
-            for await (const chunk of response) {
-                yield chunk.text;
+                const PARAMETER_EXTRACTION_PROMPT = getArgumentsForFunctionCall(properties_of_function_call, prompt)
+
+                // console.log(PARAMETER_EXTRACTION_PROMPT)
+
+                // MODEL 2
+
+                // #CALL FOR TAKING THE PARAMETERS TO PASS IN THE FUNCTION FROM THE USER
+
+                const arguments_to_pass_to_handler_function = await this.genAI.models.generateContent({
+                    model: 'gemini-2.0-flash',
+                    contents: [
+                        { role: 'user', parts: [{ text: PARAMETER_EXTRACTION_PROMPT }] }
+                    ]
+                })
+
+                // console.log(JSON.parse(arguments_to_pass_to_handler_function?.candidates?.[0]?.content?.parts?.[0]?.text!) || '')
+                const argumentsResponse: GetDoctorsParams = safeJsonParse(arguments_to_pass_to_handler_function?.candidates?.[0]?.content?.parts?.[0]?.text!)
+                // console.log(argumentsResponse.name)
+                // console.log(argumentsResponse.specialization)
+                // console.log(argumentsResponse.fee)
+
+                console.log(argumentsResponse)
+
+                if (!argumentsResponse) return;
+
+                const doctorsResult = await this.tools[function_to_call || '']?.handler(argumentsResponse)
+
+                console.log('got the doctors result')
+
+                const { doctors } = doctorsResult
+
+                if (doctors.length > 0) {
+                    const DOCTOR_RESPONSE_PROMPT = generateDoctorResponsePrompt(doctors as Doctor[], prompt)
+
+                    // # MODEL 3
+
+                    // sending the respone of 
+
+                    const finalResponse = await this.genAI.models.generateContentStream({
+                        model: 'gemini-2.0-flash',
+                        contents: [
+                            { role: 'model', parts: [{ text: DOCTOR_RESPONSE_PROMPT }] }
+                        ]
+                    })
+
+                    for await (const chunk of finalResponse) {
+                        yield chunk.text
+                    }
+                }
+
+
             }
+
+            else {
+
+                const response = await this.genAI.models.generateContentStream({
+                    model: 'gemini-2.0-flash',
+                    contents: [
+                        { role: 'model', parts: [{ text: system_prompt }] },
+                        { role: 'user', parts: [{ text: prompt }] },
+                    ],
+                })
+
+                for await (const chunk of response) {
+                    yield chunk.text;
+                }
+            }
+            // console.log(formattedHistory)
 
 
         } catch (error) {
