@@ -25,3 +25,23 @@ export interface Message {
     timestamp: Date;
     isStreaming?: boolean;
 }
+
+export interface Tools {
+    name: string,
+    description: string,
+    parameter: {
+        type: string,
+        properties: Record<string, any>
+        required: string[]
+    }
+    handler: (args: any) => Promise<any>
+}
+
+
+export interface GetDoctorsParams {
+    name?: string;
+    specialization?: string;
+    lastId?: string;
+    take?: number;
+    fee?: number;
+}

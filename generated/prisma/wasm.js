@@ -142,6 +142,30 @@ exports.Prisma.OtpScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.DoctorScalarFieldEnum = {
+  id: 'id',
+  fullName: 'fullName',
+  email: 'email',
+  phone: 'phone',
+  gender: 'gender',
+  dob: 'dob',
+  profileImage: 'profileImage',
+  specialization: 'specialization',
+  experienceYears: 'experienceYears',
+  education: 'education',
+  languagesSpoken: 'languagesSpoken',
+  consultationFee: 'consultationFee',
+  isVerified: 'isVerified',
+  rating: 'rating',
+  bio: 'bio',
+  address: 'address',
+  city: 'city',
+  state: 'state',
+  pincode: 'pincode',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -165,7 +189,8 @@ exports.Gender = exports.$Enums.Gender = {
 
 exports.Prisma.ModelName = {
   User: 'User',
-  Otp: 'Otp'
+  Otp: 'Otp',
+  Doctor: 'Doctor'
 };
 
 /**
