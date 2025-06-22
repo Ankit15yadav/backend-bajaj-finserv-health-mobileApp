@@ -18,6 +18,7 @@ export async function auth(req: Request, res: Response, next: NextFunction) {
 
         // if token is not presnet then respond with 401 error  
         if (!token) {
+            console.log('token not presnet')
             return res.status(401).json({
                 success: false,
                 message: "Token is not present / unAuthorized"
@@ -32,7 +33,6 @@ export async function auth(req: Request, res: Response, next: NextFunction) {
         next()
     } catch (error) {
         console.log(error);
-
         return res.status(401).json({
             success: false,
             message: "TOKEN IS EXPIRED , REFRESH THE TOKEN OF THE USER"

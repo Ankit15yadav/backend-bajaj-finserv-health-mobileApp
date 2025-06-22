@@ -5,10 +5,10 @@ import prisma from "../../utils/prisma";
 
 
 export async function getDoctors(params: GetDoctorsParams) {
-    const { name, specialization, lastId, take = 5, fee } = params;
+    const { name, specialization, lastId, take = 4, fee } = params;
 
     try {
-        console.log('calling api')
+        // console.log('calling api')
 
         const doctors = await prisma.doctor.findMany({
             where: {
@@ -26,10 +26,10 @@ export async function getDoctors(params: GetDoctorsParams) {
 
             take,
             orderBy: {
-                id: "asc",
+                fullName: 'asc'
             },
         });
-        console.log("api called")
+        // console.log("api called")
 
         return doctors;
     } catch (error) {

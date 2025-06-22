@@ -13,12 +13,12 @@ export async function getDoctorInformation(req: Request, res: Response): Promise
             fee: req.query.fee ? Number(req.query.fee) : undefined,
         });
 
-        if (!doctors || doctors.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: `NO DOCTORS FOUND`,
-            });
-        }
+        // if (!doctors || doctors.length === 0) {
+        //     return res.status(404).json({
+        //         success: false,
+        //         message: `NO DOCTORS FOUND`,
+        //     });
+        // }
 
         return res.status(200).json({
             success: true,
